@@ -1,0 +1,109 @@
+####################################################################
+## Copyright(c) Oracle Corporation 1998,2023. All rights reserved.##
+##                                                                ##
+## Specify values for the variables listed below to customize     ##
+## your installation.                                             ##
+##                                                                ##
+## IMPORTANT NOTE: This file contains plain text passwords and    ##
+## should be secured to have read permission only by oracle user  ##
+## or db administrator who owns this installation.                ##
+##                                                                ##
+####################################################################
+
+#-------------------------------------------------------------------------------
+# Do not change the following system generated value. 
+#-------------------------------------------------------------------------------
+oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v23.0.0
+
+#-------------------------------------------------------------------------------
+# Specify the installation option.
+# It can be one of the following:
+#   - INSTALL_DB_SWONLY
+#   - INSTALL_DB_AND_CONFIG
+#   - UPGRADE_DB
+#-------------------------------------------------------------------------------
+oracle.install.option=INSTALL_DB_SWONLY
+
+#-------------------------------------------------------------------------------
+# Specify the Unix group to be set for the inventory directory.  
+#-------------------------------------------------------------------------------
+UNIX_GROUP_NAME=oinstall
+
+#-------------------------------------------------------------------------------
+# Specify the location which holds the inventory files.
+# This is an optional parameter if installing on
+# Windows based Operating System.
+#-------------------------------------------------------------------------------
+INVENTORY_LOCATION={{ inventory_location }}
+
+#-------------------------------------------------------------------------------
+# Specify the complete path of the Oracle Home. 
+# Make sure to update this to reflect Oracle 23c Home.
+#-------------------------------------------------------------------------------
+ORACLE_HOME=/u01/app/oracle/product/23c/dbhome_1
+
+#-------------------------------------------------------------------------------
+# Specify the complete path of the Oracle Base. 
+# Make sure to update this for Oracle 23c Base.
+#-------------------------------------------------------------------------------
+ORACLE_BASE=/u01/app/oracle
+
+#-------------------------------------------------------------------------------
+# Specify the installation edition of the component.                     
+#                                                             
+# The value should contain only one of these choices.  
+#   - EE     : Enterprise Edition 
+#   - SE2     : Standard Edition 2
+#-------------------------------------------------------------------------------
+oracle.install.db.InstallEdition=EE  # or SE2 based on your requirements
+
+###############################################################################
+# PRIVILEGED OPERATING SYSTEM GROUPS                                          #
+# Specify OS groups for SYSDBA and SYSOPER privileges.                      #
+# Typically, "dba" for both of these groups unless customized.
+#-------------------------------------------------------------------------------
+oracle.install.db.OSDBA_GROUP=dba
+oracle.install.db.OSOPER_GROUP=dba
+
+###############################################################################
+# Database Configuration Options for Oracle 23c                              #
+#-------------------------------------------------------------------------------
+
+# Specify whether the database should be configured as a Container database.
+# If you're setting up as CDB, set to 'true', otherwise 'false'.
+oracle.install.db.ConfigureAsContainerDB=false  # Set to 'true' for CDB install.
+
+# Starter Database character set, make sure to configure as per your requirement.
+# Use AL32UTF8 for Unicode support or another preferred charset.
+oracle.install.db.config.starterdb.characterSet=AL32UTF8
+
+# Specify the Starter Database SID.
+oracle.install.db.config.starterdb.SID=ORCL
+
+# Set up memory options (Automatic Memory Management - true or false)
+oracle.install.db.config.starterdb.memoryOption=true
+
+# Password Configuration:
+# Set the passwords for SYS, SYSTEM, DBSNMP, and PDBADMIN users.
+oracle.install.db.config.starterdb.password.SYS=your_sys_password
+oracle.install.db.config.starterdb.password.SYSTEM=your_system_password
+oracle.install.db.config.starterdb.password.DBSNMP=your_dbsnmp_password
+oracle.install.db.config.starterdb.password.PDBADMIN=your_pdbadmin_password
+
+# Specify the storage type for the database.
+# You can select ASM_STORAGE or FILE_SYSTEM_STORAGE depending on the setup.
+oracle.install.db.config.starterdb.storageType=ASM_STORAGE
+
+# If using ASM storage, specify ASM disk groups
+oracle.install.db.config.asm.diskGroup=DATA
+
+# Other configuration options like management options, recovery, etc.
+# If you're using Oracle Enterprise Manager (OEM), configure the following:
+oracle.install.db.config.starterdb.managementOption=DEFAULT
+oracle.install.db.config.starterdb.omsHost=your_oms_host
+oracle.install.db.config.starterdb.omsPort=your_oms_port
+
+# Oracle Support credentials if required (not mandatory for local installation)
+MYORACLESUPPORT_USERNAME=your_oracle_support_user
+MYORACLESUPPORT_PASSWORD=your_oracle_support_password
+SECURITY_UPDATES_VIA_MYORACLESUPPORT=true

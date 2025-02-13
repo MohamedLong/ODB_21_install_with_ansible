@@ -1,0 +1,135 @@
+---
+- name: Clean server from Oracle Database installation
+  hosts: all
+  become: true
+  vars:
+    oracle_user: "oracle"
+    oracle_group: "oinstall"
+    oracle_base: "/u01/app/oracle"
+    oracle_home: "/u01/app/oracle/product/23c/dbhome_1"
+    inventory_location: "/u01/app/oraInventory"
+
+  tasks:
+    # Stop any running Oracle processes
+    - name: Stop Oracle database processes
+      command: "{{ oracle_home }}/bin/sqlplus / as sysdba <<< 'shutdown immediate'"
+      ignore_errors: yes  # Ignore errors if no database is running
+      become_user: "{{ oracle_user }}"
+
+    - name: Stop Oracle listeners
+      command: "{{ oracle_home }}/bin/lsnrctl stop"
+      ignore_errors: yes  # Ignore errors if no listener is running
+      become_user: "{{ oracle_user }}"
+
+    # Remove Oracle directories
+    - name: Remove Oracle base directory
+      file:
+        path: "{{ oracle_base }}"
+        state: absent
+
+    - name: Remove Oracle inventory directory
+      file:
+        path: "{{ inventory_location }}"
+        state: absent
+
+    # Remove Oracle user and groups
+    - name: Remove Oracle user
+      user:
+        name: "{{ oracle_user }}"
+        state: absent
+        remove: yes  # Remove home directory and mail spool
+
+    - name: Remove oinstall group
+      group:
+        name: "oinstall"
+        state: absent
+
+    - name: Remove dba group
+      group:
+        name: "dba"
+        state: absent
+
+    # Remove environment variables from .bash_profile
+    - name: Clean Oracle environment variables from .bash_profile
+      blockinfile:
+        path: /home/oracle/.bash_profile
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - ORACLE ENV"
+        block: ""
+        state: absent
+      when: oracle_user is defined
+
+    # Remove kernel parameters (optional)
+    - name: Remove Oracle-specific kernel parameters
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: absent
+      loop:
+        - { name: 'fs.file-max', value: '6815744' }
+        - { name: 'kernel.sem', value: '250 32000 100 128' }
+        - { name: 'kernel.shmmni', value: '4096' }
+        - { name: 'kernel.shmall', value: '1073741824' }
+        - { name: 'kernel.shmmax', value: '4398046511104' }
+        - { name: 'net.core.rmem_default', value: '262144' }
+        - { name: 'net.core.rmem_max', value: '4194304' }
+        - { name: 'net.core.wmem_default', value: '262144' }
+        - { name: 'net.core.wmem_max', value: '1048576' }
+
+    # Remove limits configuration for Oracle user
+    - name: Remove Oracle user limits
+      blockinfile:
+        path: /etc/security/limits.conf
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - ORACLE LIMITS"
+        block: ""
+        state: absent
+
+    # Remove PAM configuration for Oracle user
+    - name: Remove PAM configuration
+      lineinfile:
+        path: /etc/pam.d/login
+        regexp: '^session\s+required\s+pam_limits.so'
+        state: absent
+
+    # Remove any remaining Oracle-related files
+    - name: Remove temporary Oracle files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/db_install.rsp
+        - /tmp/LINUX.X64_233000_db_home.zip
+        - /tmp/jdk-17_linux-x64_bin.rpm
+
+    # Clean up Oracle-related cron jobs (if any)
+    - name: Remove Oracle-related cron jobs
+      cron:
+        name: "Oracle-related cron job"
+        user: "{{ oracle_user }}"
+        state: absent
+
+    # Clean up Oracle-related services (if any)
+    - name: Remove Oracle-related services
+      service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      loop:
+        - oracle-rdbms
+        - oracle-listener
+
+    # Clean up Oracle-related environment variables from /etc/profile (if any)
+    - name: Remove Oracle environment variables from /etc/profile
+      blockinfile:
+        path: /etc/profile
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - ORACLE ENV"
+        block: ""
+        state: absent
+
+    # Clean up Oracle-related files in /etc (if any)
+    - name: Remove Oracle-related files in /etc
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/oratab
+        - /etc/oracle
