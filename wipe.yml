@@ -1,0 +1,83 @@
+---
+- name: Completely Uninstall Oracle Database 21c
+  hosts: oracle_db
+  become: true
+  tasks:
+
+    # Stop any running Oracle database and listener services
+    - name: Stop Oracle database
+      command: "{{ item }}"
+      become_user: oracle
+      ignore_errors: yes
+      with_items:
+        - "sqlplus / as sysdba <<EOF\nshutdown immediate;\nexit;\nEOF"
+        - "lsnrctl stop"
+
+    # Remove Oracle services
+    - name: Remove Oracle services from systemd
+      file:
+        path: "/etc/systemd/system/oracle.service"
+        state: absent
+
+    # Remove Oracle user processes
+    - name: Kill all Oracle-related processes
+      shell: "ps -ef | grep oracle | awk '{print $2}' | xargs kill -9"
+      ignore_errors: yes
+
+    # Remove Oracle directories
+    - name: Delete Oracle directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /u01/app/oracle
+        - /u01/app/oraInventory
+        - /etc/oratab
+        - /etc/oraInst.loc
+
+    # Remove Oracle user and groups
+    - name: Remove Oracle user
+      user:
+        name: oracle
+        state: absent
+        remove: yes
+
+    - name: Remove Oracle groups
+      group:
+        name: "{{ item }}"
+        state: absent
+      with_items:
+        - oinstall
+        - dba
+
+    # Clean up environment variables
+    - name: Remove Oracle environment variables
+      lineinfile:
+        path: /home/oracle/.bash_profile
+        state: absent
+        regexp: '^(export ORACLE_)'
+
+    # Remove kernel parameter configurations
+    - name: Remove kernel parameters
+      lineinfile:
+        path: /etc/sysctl.conf
+        state: absent
+        regexp: '^(fs.file-max|kernel.sem|kernel.shmmni|kernel.shmall|kernel.shmmax|net.core.rmem_default|net.core.rmem_max|net.core.wmem_default|net.core.wmem_max)'
+
+    - name: Reload sysctl
+      command: sysctl -p
+      ignore_errors: yes
+
+    # Remove user limits
+    - name: Remove Oracle user limits
+      lineinfile:
+        path: /etc/security/limits.conf
+        state: absent
+        regexp: '^(oracle)'
+
+    # Final cleanup
+    - name: Reboot the server to finalize changes
+      reboot:
+        msg: "Rebooting after Oracle uninstallation"
+        pre_reboot_delay: 10
+        post_reboot_delay: 30

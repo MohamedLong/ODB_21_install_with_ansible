@@ -1,0 +1,64 @@
+---
+- name: Verify Oracle Database 21c Installation
+  hosts: oracle_db
+  become: true
+  tasks:
+
+    # Check if Oracle database services are running
+    - name: Check Oracle database processes
+      shell: "ps -ef | grep pmon | grep -v grep"
+      register: oracle_processes
+      changed_when: false
+
+    - name: Display Oracle database process status
+      debug:
+        msg: "{{ oracle_processes.stdout_lines }}"
+
+    # Check if Oracle Listener is running
+    - name: Check Oracle Listener status
+      shell: |
+        source /home/oracle/.bash_profile
+        lsnrctl status
+      become_user: oracle
+      register: listener_status
+      changed_when: false
+      ignore_errors: yes
+      tags: 
+        - Listener_status
+
+    - name: Display Listener status
+      debug:
+        msg: "{{ listener_status.stdout_lines }}"
+
+    # Check Oracle environment variables
+    - name: Check Oracle environment variables
+      shell: |
+        source /home/oracle/.bash_profile
+        echo $ORACLE_HOME && echo $ORACLE_SID
+      become_user: oracle
+      register: env_vars
+      changed_when: false
+
+    - name: Display Oracle environment variables
+      debug:
+        msg: "{{ env_vars.stdout_lines }}"
+
+    # Check if database is open and accessible
+    - name: Check database open mode
+      shell: |
+        source /home/oracle/.bash_profile
+        sqlplus -s / as sysdba <<EOF
+        SET HEADING OFF;
+        SET FEEDBACK OFF;
+        SELECT status FROM v\$instance;
+        EXIT;
+        EOF
+      become_user: oracle
+      register: db_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display database status
+      debug:
+        msg: "{{ db_status.stdout_lines }}"
+

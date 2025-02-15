@@ -13,7 +13,7 @@
 #-------------------------------------------------------------------------------
 # Do not change the following system generated value. 
 #-------------------------------------------------------------------------------
-oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v23.0.0
+oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v21.0.0
 
 #-------------------------------------------------------------------------------
 # Specify the installation option.
@@ -34,13 +34,13 @@ UNIX_GROUP_NAME=oinstall
 # This is an optional parameter if installing on
 # Windows based Operating System.
 #-------------------------------------------------------------------------------
-INVENTORY_LOCATION={{ inventory_location }}
+INVENTORY_LOCATION=/u01/app/oraInventory
 
 #-------------------------------------------------------------------------------
 # Specify the complete path of the Oracle Home. 
 # Make sure to update this to reflect Oracle 23c Home.
 #-------------------------------------------------------------------------------
-ORACLE_HOME=/u01/app/oracle/product/23c/dbhome_1
+ORACLE_HOME=/u01/app/oracle/product/21c/dbhome_1
 
 #-------------------------------------------------------------------------------
 # Specify the complete path of the Oracle Base. 
@@ -55,7 +55,7 @@ ORACLE_BASE=/u01/app/oracle
 #   - EE     : Enterprise Edition 
 #   - SE2     : Standard Edition 2
 #-------------------------------------------------------------------------------
-oracle.install.db.InstallEdition=EE  # or SE2 based on your requirements
+oracle.install.db.InstallEdition=EE 
 
 ###############################################################################
 # PRIVILEGED OPERATING SYSTEM GROUPS                                          #
@@ -65,13 +65,20 @@ oracle.install.db.InstallEdition=EE  # or SE2 based on your requirements
 oracle.install.db.OSDBA_GROUP=dba
 oracle.install.db.OSOPER_GROUP=dba
 
+# Specify additional administrative groups
+oracle.install.db.OSBACKUPDBA_GROUP=dba
+oracle.install.db.OSDGDBA_GROUP=dba
+oracle.install.db.OSKMDBA_GROUP=dba
+oracle.install.db.OSRACDBA_GROUP=dba
+
+
 ###############################################################################
 # Database Configuration Options for Oracle 23c                              #
 #-------------------------------------------------------------------------------
 
 # Specify whether the database should be configured as a Container database.
 # If you're setting up as CDB, set to 'true', otherwise 'false'.
-oracle.install.db.ConfigureAsContainerDB=false  # Set to 'true' for CDB install.
+oracle.install.db.ConfigureAsContainerDB=false
 
 # Starter Database character set, make sure to configure as per your requirement.
 # Use AL32UTF8 for Unicode support or another preferred charset.
@@ -85,10 +92,10 @@ oracle.install.db.config.starterdb.memoryOption=true
 
 # Password Configuration:
 # Set the passwords for SYS, SYSTEM, DBSNMP, and PDBADMIN users.
-oracle.install.db.config.starterdb.password.SYS=your_sys_password
-oracle.install.db.config.starterdb.password.SYSTEM=your_system_password
-oracle.install.db.config.starterdb.password.DBSNMP=your_dbsnmp_password
-oracle.install.db.config.starterdb.password.PDBADMIN=your_pdbadmin_password
+oracle.install.db.config.starterdb.password.SYS=MySysPass123
+oracle.install.db.config.starterdb.password.SYSTEM=MySysPass123
+oracle.install.db.config.starterdb.password.DBSNMP=MySysPass123
+oracle.install.db.config.starterdb.password.PDBADMIN=MySysPass123
 
 # Specify the storage type for the database.
 # You can select ASM_STORAGE or FILE_SYSTEM_STORAGE depending on the setup.
@@ -100,8 +107,8 @@ oracle.install.db.config.asm.diskGroup=DATA
 # Other configuration options like management options, recovery, etc.
 # If you're using Oracle Enterprise Manager (OEM), configure the following:
 oracle.install.db.config.starterdb.managementOption=DEFAULT
-oracle.install.db.config.starterdb.omsHost=your_oms_host
-oracle.install.db.config.starterdb.omsPort=your_oms_port
+oracle.install.db.config.starterdb.omsHost=localhost
+oracle.install.db.config.starterdb.omsPort=1521
 
 # Oracle Support credentials if required (not mandatory for local installation)
 MYORACLESUPPORT_USERNAME=your_oracle_support_user

@@ -8,7 +8,7 @@
     oracle_base: "/u01/app/oracle"
     oracle_home: "/u01/app/oracle/product/21c/dbhome_1"
     inventory_location: "/u01/app/oraInventory"
-    db_name: "ORCL"
+    db_name: "orcl"
     sys_password: "MySysPass123"
     system_password: "MySysPass123"
     oracle_zip: "/tmp/LINUX.X64_213000_db_home.zip"
@@ -16,26 +16,13 @@
     oracle_install_dir: "/tmp/oracle_install"
 
   tasks:
-    # Ensure Oracle directories exist
-    - name: Create Oracle directories
-      file:
-        path: "{{ item }}"
-        state: directory
-        owner: "{{ oracle_user }}"
-        group: "{{ oracle_group }}"
-        mode: '0755'
-      loop:
-        - "{{ oracle_base }}"
-        - "{{ oracle_home }}"
-        - "{{ inventory_location }}"
-
-    # Check if the Oracle ZIP file exists
+    # Check if the Oracle installation ZIP file already exists on the server
     - name: Check if Oracle ZIP file exists
       stat:
         path: "{{ oracle_zip }}"
       register: oracle_zip_stat
 
-    # Copy Oracle ZIP file from the controller to the server (if missing)
+    # Copy the Oracle installation ZIP file to the server if it doesn't already exist
     - name: Copy Oracle ZIP file to server (if missing)
       copy:
         src: "{{ local_oracle_zip }}"
@@ -45,42 +32,7 @@
         mode: '0644'
       when: not oracle_zip_stat.stat.exists
 
-    # Ensure Oracle installation directory exists
-    - name: Create Oracle install directory
-      file:
-        path: "{{ oracle_install_dir }}"
-        state: directory
-        owner: "{{ oracle_user }}"
-        group: "{{ oracle_group }}"
-        mode: '0755'
-
-    # Ensure Oracle home directory exists
-    - name: Ensure Oracle home directory exists
-      file:
-        path: "{{ oracle_home }}"
-        state: directory
-        owner: "{{ oracle_user }}"
-        group: "{{ oracle_group }}"
-        mode: '0755'
-      become: true
-
-    # Check if the Oracle DB ZIP file exists on the server
-    - name: Check if Oracle DB ZIP file exists
-      stat:
-        path: "{{ oracle_zip }}"
-      register: db_zip_stat
-
-    # Copy Oracle ZIP file to server (if missing)
-    - name: Copy Oracle ZIP file to server (if missing)
-      copy:
-        src: "{{ local_oracle_zip }}"
-        dest: "{{ oracle_zip }}"
-        owner: "{{ oracle_user }}"
-        group: "{{ oracle_group }}"
-        mode: '0644'
-      when: not db_zip_stat.stat.exists
-
-    # Unzip Oracle DB installation zip file
+    # Extract the Oracle installation ZIP file to the specified Oracle home directory
     - name: Extract Oracle DB installation zip file
       ansible.builtin.unarchive:
         src: "{{ oracle_zip }}"
@@ -90,9 +42,18 @@
         group: "{{ oracle_group }}"
         mode: '0755'
       become_user: "{{ oracle_user }}"
-      when: db_zip_stat.stat.exists
+      when: oracle_zip_stat.stat.exists
 
-    # Run Oracle installer in silent mode
+    # Copy the Oracle response file to the server for silent installation
+    - name: Copy Oracle response file to server
+      copy:
+        src: files/db_install.rsp
+        dest: "{{ oracle_home }}/install/response/db_install.rsp"
+        owner: "{{ oracle_user }}"
+        group: "{{ oracle_group }}"
+        mode: '0644'
+
+    # Run the Oracle installer in silent mode using the response file
     - name: Run Oracle installer in silent mode
       command: >
         {{ oracle_home }}/runInstaller -silent
@@ -100,43 +61,18 @@
         -ignorePrereq
       become_user: "{{ oracle_user }}"
       register: install_output
-      # ignore_errors: yes
+      changed_when: "'Successfully Setup Software' in install_output.stdout"
+      failed_when: install_output.rc != 0 and 'Successfully Setup Software' not in install_output.stdout
 
-    # Check Oracle installation logs for success
-    - name: Check Oracle installation logs
-      shell: tail -n 50 /tmp/installActions*.log | grep -i "successful"
-      register: install_log
-      failed_when: install_log.stdout == ""
-
-    # Run Oracle configuration script (non-interactive)
-    - name: Run Oracle configuration script (non-interactive)
-      expect:
-        command: /etc/init.d/oracle-free-21c configure
-        timeout: 1800
-        responses:
-          "password.*:": "{{ sys_password }}"
-          "Confirm the password:": "{{ sys_password }}"
-          "Enter SYS user password:": "{{ sys_password }}"
-          "Enter SYSTEM user password:": "{{ system_password }}"
-          "Enter PDBADMIN User Password:": "{{ sys_password }}"
+    # Execute the mandatory root scripts after Oracle installation
+    - name: Run root scripts required after installation
+      command: "{{ item }}"
       become: yes
+      with_items:
+        - "/u01/app/oraInventory/orainstRoot.sh"
+        - "/u01/app/oracle/product/21c/dbhome_1/root.sh"
 
-    # Set Oracle environment variables
-    - name: Set Oracle environment variables
-      blockinfile:
-        path: /home/oracle/.bash_profile
-        block: |
-          export ORACLE_BASE={{ oracle_base }}
-          export ORACLE_HOME={{ oracle_home }}
-          export ORACLE_SID={{ db_name }}
-          export PATH=$ORACLE_HOME/bin:$PATH
-          export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
-          export CLASSPATH=$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib
-        owner: "{{ oracle_user }}"
-        group: "{{ oracle_group }}"
-        mode: '0644'
-
-    # Create Oracle Database using DBCA
+    # Create the Oracle database using the Database Configuration Assistant (DBCA)
     - name: Create Oracle Database using DBCA
       command: >
         {{ oracle_home }}/bin/dbca
@@ -148,14 +84,49 @@
         -characterSet AL32UTF8
         -sysPassword {{ sys_password }}
         -systemPassword {{ system_password }}
-        -createAsContainerDatabase false
+        -createAsContainerDatabase true
         -storageType FS
         -datafileDestination {{ oracle_base }}/oradata
         -memoryPercentage 40
         -emConfiguration NONE
       become_user: "{{ oracle_user }}"
-      when: install_output.rc == 0
+      register: install_output
+      # when: install_output.rc == 0
+      tags: 
+        - DBCA
 
-    - name: Show configuration output
+    # Display the installation output for debugging and verification
+    - name: Show installation output
       debug:
         msg: "{{ install_output.stdout }}"
+
+    # Start Oracle Listener
+    - name: Start Oracle Listener
+      shell: ". ~/.bash_profile && lsnrctl start"
+      become_user: "{{ oracle_user }}"
+      register: listener_start
+      changed_when: "'The command completed successfully' in listener_start.stdout"
+      tags:
+        - listener
+        
+
+    - name: Start Oracle Database
+      shell: |
+        source /home/oracle/.bash_profile
+        sqlplus / as sysdba <<EOF
+        STARTUP;
+        EXIT;
+        EOF
+      become_user: "{{ oracle_user }}"
+      register: db_startup
+      changed_when: false
+      ignore_errors: yes
+      tags:
+        - start_db
+
+    - name: Display database startup result
+      debug:
+        msg: "{{ db_startup.stdout_lines }}"
+      when: db_startup.rc == 0
+      tags:
+        - start_db

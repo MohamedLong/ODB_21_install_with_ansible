@@ -1,5 +1,5 @@
 ---
-- name: Prepare server for Oracle Database 23c installation
+- name: Prepare server for Oracle Database 21c installation
   hosts: oracle_db
   become: true
   tasks:
@@ -45,6 +45,7 @@
           - net-tools
           - glibc
           - bc
+          - make
         state: present
 
     # Copy Java RPM from control machine to the target server
@@ -103,10 +104,13 @@
         mode: '0755'
       loop:
         - /u01/app/oracle
-        - /u01/app/oracle/product/23c/dbhome_1
+        - /u01/app/oracle/product/21c/dbhome_1
         - /u01/app/oracle/oradata
-        - /u01/app/oracle/oraInventory
+        - /u01/app/oraInventory
+        - /u01/app/oracle/product/21c/dbhome_1/install/response
         - /home/oracle/scripts
+      tags:
+        - directories
 
     # Set environment variables for Oracle user
     - name: Configure Oracle user environment
@@ -114,7 +118,7 @@
         path: /home/oracle/.bash_profile
         block: |
           export ORACLE_BASE=/u01/app/oracle
-          export ORACLE_HOME=$ORACLE_BASE/product/23c/dbhome_1
+          export ORACLE_HOME=$ORACLE_BASE/product/21c/dbhome_1
           export ORACLE_SID=orcl
           export PATH=$ORACLE_HOME/bin:$PATH
           export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib  
